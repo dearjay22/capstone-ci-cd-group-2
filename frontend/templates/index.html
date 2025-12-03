@@ -1,0 +1,23 @@
+<!doctype html>
+<html>
+  <head><title>Capstone Frontend</title></head>
+  <body>
+    <h1>Capstone Frontend</h1>
+    <h2>Users</h2>
+    <ul>
+    {% for u in users %}
+      <li>{{ u.name }} ({{ u.email }})</li>
+    {% else %}
+      <li>No users available</li>
+    {% endfor %}
+    </ul>
+    <h2>Products</h2>
+    <ul>
+    {% for p in products %}
+      <li>{{ p.name }} - ${{ p.price }}</li>
+    {% else %}
+      <li>No products</li>
+    {% endfor %}
+    </ul>
+  </body>
+</html>
