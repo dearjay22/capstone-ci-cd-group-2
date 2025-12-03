@@ -8,7 +8,7 @@ PRODUCTS = [
 
 @app.route("/products", methods=["GET"])
 def list_products():
-    return jsonify(PRODUCTS), 20
+    return jsonify(PRODUCTS), 200
 
 @app.route("/products", methods=["POST"])
 def add_product():
