@@ -1,0 +1,26 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:CreateStack",
+        "cloudformation:DescribeStacks",
+        "cloudformation:UpdateStack",
+        "cloudformation:DeleteStack",
+        "ec2:Describe*",
+        "ec2:CreateTags",
+        "iam:PassRole",
+        "rds:DescribeDBInstances",
+        "rds:CreateDBInstance",
+        "rds:DeleteDBInstance",
+        "s3:CreateBucket",
+        "s3:PutObject",
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
