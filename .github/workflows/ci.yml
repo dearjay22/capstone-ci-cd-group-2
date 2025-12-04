@@ -1,0 +1,31 @@
+name: CI
+on:
+  pull_request:
+    branches: [ main ]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+      - name: Install test deps (users)
+        run: |
+          pip install -r users-service/requirements.txt
+          pip install pytest coverage flake8 bandit
+      - name: Lint
+        run: flake8 .
+      - name: Bandit security scan
+        run: bandit -r .
+      - name: Run users tests
+        run: |
+          cd users-service
+          coverage run -m pytest
+          coverage xml
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: users-service/coverage.xml
