@@ -4,13 +4,15 @@ import mysql.connector
 
 app = Flask(__name__)
 
+
 def get_db():
     return mysql.connector.connect(
         host=os.environ.get("DB_HOST", "mysql"),
         user=os.environ.get("DB_USER", "root"),
         password=os.environ.get("DB_PASS", "rootpass"),
-        database=os.environ.get("DB_NAME", "capstone")
+        database=os.environ.get("DB_NAME", "capstone"),
     )
+
 
 @app.route("/health", methods=["GET"])
 def health():
@@ -55,7 +57,7 @@ def create_user():
 
     cur.execute(
         "INSERT INTO users (name, email) VALUES (%s, %s)",
-        (payload["name"], payload["email"])
+        (payload["name"], payload["email"]),
     )
 
     db.commit()
