@@ -29,6 +29,7 @@ jobs:
           --health-retries=5
 
     steps:
+
       - uses: actions/checkout@v4
 
       - name: Set up Python
@@ -38,32 +39,45 @@ jobs:
           cache: pip
 
       - name: Install global tools
-        run: pip install pytest pytest-cov flake8 bandit mysql-connector-python
+        run: |
+          pip install pytest pytest-cov coverage flake8 bandit mysql-connector-python
 
       - name: Initialize DB
         run: mysql -h127.0.0.1 -uroot -prootpass < scripts/init_db.sql
 
+      # ----------------------------
+      # USERS SERVICE
+      # ----------------------------
       - name: Users service – install & test
         run: |
           pip install -r users-service/requirements.txt
           flake8 users-service --max-line-length=120 --exclude=venv,__pycache__
-          bandit -r users-service -ll
+          bandit -r users-service -ll -c .bandit
           cd users-service && pytest --cov=. --cov-report=xml
-
+          
+      # ----------------------------
+      # PRODUCTS SERVICE
+      # ----------------------------
       - name: Products service – install & test
         run: |
           pip install -r products-service/requirements.txt
           flake8 products-service --max-line-length=120 --exclude=venv,__pycache__
-          bandit -r products-service -ll
+          bandit -r products-service -ll -c .bandit
           cd products-service && pytest --cov=. --cov-report=xml
 
+      # ----------------------------
+      # ORDERS SERVICE
+      # ----------------------------
       - name: Orders service – install & test
         run: |
           pip install -r orders-service/requirements.txt
           flake8 orders-service --max-line-length=120 --exclude=venv,__pycache__
-          bandit -r orders-service -ll
+          bandit -r orders-service -ll -c .bandit
           cd orders-service && pytest --cov=. --cov-report=xml
 
+      # ----------------------------
+      # COVERAGE ARTIFACT EXPORT
+      # ----------------------------
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
