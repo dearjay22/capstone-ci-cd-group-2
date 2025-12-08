@@ -29,7 +29,6 @@ jobs:
           --health-retries=10
 
     steps:
-
       - uses: actions/checkout@v4
 
       - name: Set up Python
@@ -45,9 +44,6 @@ jobs:
       - name: Initialize database schema
         run: mysql -h127.0.0.1 -uroot -prootpass < scripts/init_db.sql
 
-      # ----------------------------
-      # FUNCTION: Test a service
-      # ----------------------------
       - name: Users Service – Lint + Test + Bandit
         run: |
           pip install -r users-service/requirements.txt
@@ -69,14 +65,11 @@ jobs:
           bandit -r orders-service -ll -c bandit.yaml
           cd orders-service && pytest --cov=. --cov-report=xml && cd ..
 
-      # ----------------------------
-      # Upload coverage reports
-      # ----------------------------
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
-           name: coverage-report
-           path: |
+          name: coverage-report
+          path: |
             users-service/coverage.xml
             products-service/coverage.xml
             orders-service/coverage.xml
