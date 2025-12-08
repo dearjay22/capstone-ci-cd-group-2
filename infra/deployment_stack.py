@@ -4,7 +4,6 @@ from aws_cdk import (
     aws_iam as iam,
     aws_rds as rds,
     aws_secretsmanager as secrets,
-    CfnOutput,
     Duration,
 )
 from constructs import Construct
@@ -34,7 +33,7 @@ class DeploymentStack(Stack):
             ],
         )
 
-        # Bandit-safe Secret Manager configuration
+        # Secret Manager
         db_secret = secrets.Secret(
             self,
             "DbCredentials",
@@ -55,7 +54,8 @@ class DeploymentStack(Stack):
             allow_all_outbound=False,
         )
 
-        database = rds.DatabaseInstance(
+        # RDS DatabaseInstanc
+        _database = rds.DatabaseInstance(
             self,
             "CapstoneDB",
             engine=rds.DatabaseInstanceEngine.mysql(
@@ -75,12 +75,14 @@ class DeploymentStack(Stack):
             security_groups=[rds_sg],
             backup_retention=Duration.days(0),
             deletion_protection=False,
-            removal_policy=Stack.of(self).node.try_get_context("retain_resources")
-            and Stack.of(self).RETAIN
-            or Stack.of(self).DESTROY,
+            removal_policy=(
+                Stack.of(self).node.try_get_context("retain_resources")
+                and Stack.of(self).RETAIN
+                or Stack.of(self).DESTROY
+            ),
         )
 
-        # EC2 SG
+        # EC2 Security Group
         ec2_sg = ec2.SecurityGroup(
             self,
             "EC2SecurityGroup",

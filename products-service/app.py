@@ -15,6 +15,7 @@ def get_db():
         database=os.environ.get("DB_NAME", "capstone"),
     )
 
+
 def fetch_products():
     """Return all products as a list of dicts."""
     db = get_db()
@@ -79,6 +80,7 @@ def create_product(data: dict):
     finally:
         cur.close()
         db.close()
+
 
 @app.route("/health", methods=["GET"])
 def health():
