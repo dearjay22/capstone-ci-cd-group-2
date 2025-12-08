@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  pull_request:
-    branches: [ main ]
   push:
+    branches: [ main ]
+  pull_request:
     branches: [ main ]
 
 permissions:
@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   test:
-    name: Run Tests & Linting
+    name: Run Tests, Linting & Security Checks
     runs-on: ubuntu-latest
 
     services:
@@ -26,7 +26,7 @@ jobs:
           --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -prootpass"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
+          --health-retries=10
 
     steps:
 
@@ -42,45 +42,38 @@ jobs:
         run: |
           pip install pytest pytest-cov coverage flake8 bandit mysql-connector-python
 
-      - name: Initialize DB
+      - name: Initialize database schema
         run: mysql -h127.0.0.1 -uroot -prootpass < scripts/init_db.sql
 
       # ----------------------------
-      # USERS SERVICE
+      # FUNCTION: Test a service
       # ----------------------------
-      - name: Users service – install & test
+      - name: Users Service – Lint + Test + Bandit
         run: |
           pip install -r users-service/requirements.txt
           flake8 users-service --max-line-length=120 --exclude=venv,__pycache__
           bandit -r users-service -ll -c bandit.yaml
-          cd users-service && pytest --cov=. --cov-report=xml
-          
-      # ----------------------------
-      # PRODUCTS SERVICE
-      # ----------------------------
-      - name: Products service – install & test
+          cd users-service && pytest --cov=. --cov-report=xml && cd ..
+
+      - name: Products Service – Lint + Test + Bandit
         run: |
           pip install -r products-service/requirements.txt
           flake8 products-service --max-line-length=120 --exclude=venv,__pycache__
           bandit -r products-service -ll -c bandit.yaml
-          cd products-service && pytest --cov=. --cov-report=xml
+          cd products-service && pytest --cov=. --cov-report=xml && cd ..
 
-      # ----------------------------
-      # ORDERS SERVICE
-      # ----------------------------
-      - name: Orders service – install & test
+      - name: Orders Service – Lint + Test + Bandit
         run: |
           pip install -r orders-service/requirements.txt
           flake8 orders-service --max-line-length=120 --exclude=venv,__pycache__
           bandit -r orders-service -ll -c bandit.yaml
-          cd orders-service && pytest --cov=. --cov-report=xml
+          cd orders-service && pytest --cov=. --cov-report=xml && cd ..
 
       # ----------------------------
-      # COVERAGE ARTIFACT EXPORT
+      # Upload coverage reports
       # ----------------------------
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
           name: coverage-reports
-          path: |
-            **/coverage.xml
+          path: "**/coverage.xml"
