@@ -2,30 +2,164 @@ name: CI
 on:
   pull_request:
     branches: [ main ]
+  push:
+    branches: [ main ]
+
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: rootpass
+          MYSQL_DATABASE: capstone
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    
     steps:
       - uses: actions/checkout@v4
+      
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-      - name: Install test deps (users)
+      
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h"127.0.0.1" -P3306 -uroot -prootpass --silent; then
+              echo "MySQL is ready"
+              break
+            fi
+            echo "Waiting for MySQL..."
+            sleep 2
+          done
+      
+      - name: Initialize Database
+        run: |
+          mysql -h127.0.0.1 -P3306 -uroot -prootpass < scripts/init_db.sql
+      
+      # Users Service
+      - name: Install users service dependencies
         run: |
           pip install -r users-service/requirements.txt
-          pip install pytest coverage flake8 bandit
-      - name: Lint
-        run: flake8 .
-      - name: Bandit security scan
-        run: bandit -r .
-      - name: Run users tests
+          pip install pytest coverage flake8 bandit pytest-cov
+      
+      - name: Lint users service
+        run: flake8 users-service --max-line-length=120 --exclude=venv,__pycache__
+      
+      - name: Security scan users service
+        run: bandit -r users-service -ll
+      
+      - name: Test users service
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: rootpass
+          DB_NAME: capstone
         run: |
           cd users-service
-          coverage run -m pytest
-          coverage xml
-      - name: Upload coverage
+          pytest --cov=. --cov-report=xml --cov-report=term
+      
+      # Products Service
+      - name: Install products service dependencies
+        run: |
+          pip install -r products-service/requirements.txt
+      
+      - name: Lint products service
+        run: flake8 products-service --max-line-length=120 --exclude=venv,__pycache__
+      
+      - name: Security scan products service
+        run: bandit -r products-service -ll
+      
+      - name: Test products service
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: rootpass
+          DB_NAME: capstone
+        run: |
+          cd products-service
+          pytest --cov=. --cov-report=xml --cov-report=term
+      
+      # Orders Service
+      - name: Install orders service dependencies
+        run: |
+          pip install -r orders-service/requirements.txt
+      
+      - name: Lint orders service
+        run: flake8 orders-service --max-line-length=120 --exclude=venv,__pycache__
+      
+      - name: Security scan orders service
+        run: bandit -r orders-service -ll
+      
+      - name: Test orders service
+        env:
+          DB_HOST: 127.0.0.1
+          DB_USER: root
+          DB_PASS: rootpass
+          DB_NAME: capstone
+        run: |
+          cd orders-service
+          pytest --cov=. --cov-report=xml --cov-report=term
+      
+      - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-report
-          path: users-service/coverage.xml
+          name: coverage-reports
+          path: |
+            users-service/coverage.xml
+            products-service/coverage.xml
+            orders-service/coverage.xml
+  
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Build users service image
+        run: docker build -t capstone-users:${{ github.sha }} ./users-service
+      
+      - name: Build products service image
+        run: docker build -t capstone-products:${{ github.sha }} ./products-service
+      
+      - name: Build orders service image
+        run: docker build -t capstone-orders:${{ github.sha }} ./orders-service
+      
+      - name: Build frontend image
+        run: docker build -t capstone-frontend:${{ github.sha }} ./frontend
+      
+      - name: Run Trivy vulnerability scanner on users service
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'capstone-users:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Run Trivy vulnerability scanner on products service
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'capstone-products:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'
+      
+      - name: Run Trivy vulnerability scanner on orders service
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'capstone-orders:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          severity: 'CRITICAL,HIGH'

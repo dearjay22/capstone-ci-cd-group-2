@@ -1,26 +1,93 @@
-name: Deploy
+name: Deploy to AWS
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:  # Allow manual deployment
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
-      - name: Install CDK & deps
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
+      
+      - name: Install CDK
         run: |
-          pip install -r infra/requirements.txt || true
-          npm install -g aws-cdk || true
-      - name: CDK Deploy
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_REGION: ${{ secrets.AWS_REGION }}
+          npm install -g aws-cdk
+          pip install -r infra/requirements.txt
+      
+      - name: CDK Bootstrap (first time only)
+        run: |
+          cd infra
+          cdk bootstrap || echo "Already bootstrapped"
+      
+      - name: CDK Synth
         run: |
           cd infra
           cdk synth
-          cdk deploy --require-approval never
+      
+      - name: CDK Deploy
+        run: |
+          cd infra
+          cdk deploy --all --require-approval never --outputs-file outputs.json
+      
+      - name: Save deployment outputs
+        uses: actions/upload-artifact@v4
+        with:
+          name: cdk-outputs
+          path: infra/outputs.json
+      
+      - name: Display application URL
+        run: |
+          cd infra
+          if [ -f outputs.json ]; then
+            echo "Deployment successful!"
+            echo "Application URL:"
+            cat outputs.json | jq -r '.[].ApplicationURL'
+          fi
+      
+      - name: Wait for application to be ready
+        run: |
+          echo "Waiting for application to start..."
+          sleep 120
+          
+          if [ -f infra/outputs.json ]; then
+            APP_URL=$(cat infra/outputs.json | jq -r '.[].ApplicationURL')
+            echo "Testing application at: $APP_URL"
+            
+            for i in {1..10}; do
+              if curl -f -s "$APP_URL/health" > /dev/null; then
+                echo "Application is healthy!"
+                exit 0
+              fi
+              echo "Waiting... attempt $i/10"
+              sleep 30
+            done
+            
+            echo "Application may not be ready yet. Check EC2 user-data logs."
+          fi
+      
+      - name: Post deployment notification
+        if: success()
+        run: |
+          echo "Deployment completed successfully!"
+          echo "Check CloudWatch logs for application health"
+          echo "Application URL is available in the outputs"
