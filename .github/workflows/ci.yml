@@ -52,7 +52,7 @@ jobs:
         run: |
           pip install -r users-service/requirements.txt
           flake8 users-service --max-line-length=120 --exclude=venv,__pycache__
-          bandit -r users-service -ll -c .bandit
+          bandit -r users-service -ll -c bandit.yaml
           cd users-service && pytest --cov=. --cov-report=xml
           
       # ----------------------------
@@ -62,7 +62,7 @@ jobs:
         run: |
           pip install -r products-service/requirements.txt
           flake8 products-service --max-line-length=120 --exclude=venv,__pycache__
-          bandit -r products-service -ll -c .bandit
+          bandit -r products-service -ll -c bandit.yaml
           cd products-service && pytest --cov=. --cov-report=xml
 
       # ----------------------------
@@ -72,7 +72,7 @@ jobs:
         run: |
           pip install -r orders-service/requirements.txt
           flake8 orders-service --max-line-length=120 --exclude=venv,__pycache__
-          bandit -r orders-service -ll -c .bandit
+          bandit -r orders-service -ll -c bandit.yaml
           cd orders-service && pytest --cov=. --cov-report=xml
 
       # ----------------------------

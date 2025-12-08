@@ -7,7 +7,6 @@ app = Flask(__name__)
 
 
 def get_db():
-    """Create database connection"""
     return mysql.connector.connect(
         host=os.environ.get("DB_HOST", "mysql"),
         user=os.environ.get("DB_USER", "root"),
@@ -18,13 +17,11 @@ def get_db():
 
 @app.route("/health", methods=["GET"])
 def health():
-    """Health check endpoint"""
     return jsonify({"status": "healthy"}), 200
 
 
 @app.route("/products", methods=["GET"])
 def list_products():
-    """List all products from database"""
     try:
         db = get_db()
         cur = db.cursor(dictionary=True)
@@ -39,7 +36,6 @@ def list_products():
 
 @app.route("/products/<int:product_id>", methods=["GET"])
 def get_product(product_id):
-    """Get a specific product by ID"""
     try:
         db = get_db()
         cur = db.cursor(dictionary=True)
@@ -59,7 +55,6 @@ def get_product(product_id):
 
 @app.route("/products", methods=["POST"])
 def add_product():
-    """Add a new product to database"""
     payload = request.json
     if not payload or "name" not in payload or "price" not in payload:
         return jsonify({"error": "Invalid payload. Required: name, price"}), 400
@@ -89,35 +84,34 @@ def add_product():
 
 @app.route("/products/<int:product_id>", methods=["PUT"])
 def update_product(product_id):
-    """Update an existing product"""
     payload = request.json
     if not payload:
         return jsonify({"error": "No data provided"}), 400
+
+    allowed_fields = {"name", "price, description"}
+
+    updates = []
+    values = []
+
+    for field, value in payload.items():
+        if field in allowed_fields:
+            updates.append(f"{field} = %s")
+            if field == "price":
+                value = float(value)
+            values.append(value)
+
+    if not updates:
+        return jsonify({"error": "No valid fields to update"}), 400
+
+    values.append(product_id)
 
     try:
         db = get_db()
         cur = db.cursor()
 
-        # Build dynamic update query
-        updates = []
-        values = []
-        if "name" in payload:
-            updates.append("name = %s")
-            values.append(payload["name"])
-        if "price" in payload:
-            updates.append("price = %s")
-            values.append(float(payload["price"]))
-        if "description" in payload:
-            updates.append("description = %s")
-            values.append(payload["description"])
-
-        if not updates:
-            cur.close()
-            db.close()
-            return jsonify({"error": "No valid fields to update"}), 400
-
-        values.append(product_id)
+        # FIXED: This is now safe from SQL injection
         query = f"UPDATE products SET {', '.join(updates)} WHERE id = %s"
+
         cur.execute(query, values)
         db.commit()
 
@@ -135,7 +129,6 @@ def update_product(product_id):
 
 @app.route("/products/<int:product_id>", methods=["DELETE"])
 def delete_product(product_id):
-    """Delete a product"""
     try:
         db = get_db()
         cur = db.cursor()
