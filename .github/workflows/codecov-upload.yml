@@ -2,9 +2,13 @@ name: Upload coverage to Codecov
 
 on:
   workflow_run:
-    workflows: ["CI"]         # must match CI workflow 'name' exactly
+    workflows: ["CI"]          # must match CI workflow name exactly
     types:
       - completed
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   upload:
@@ -12,13 +16,15 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Download coverage artifact
+      - name: Download coverage artifact from CI run
         uses: actions/download-artifact@v4
         with:
-          name: coverage-reports
+          name: coverage-reports        # must match name in CI upload
           path: coverage
+          run-id: ${{ github.event.workflow_run.id }}
+
+      - name: Checkout repo (for Codecov commit info)
+        uses: actions/checkout@v4
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
@@ -27,5 +33,4 @@ jobs:
             coverage/users-service/coverage.xml
             coverage/products-service/coverage.xml
             coverage/orders-service/coverage.xml
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ secrets.CODECOV_TOKEN }}
