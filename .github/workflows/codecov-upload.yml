@@ -2,7 +2,7 @@ name: Upload coverage to Codecov
 
 on:
   workflow_run:
-    workflows: ["CI"]
+    workflows: ["CI"]         # must match CI workflow 'name' exactly
     types:
       - completed
 
@@ -14,15 +14,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Download artifact
+      - name: Download coverage artifact
         uses: actions/download-artifact@v4
         with:
-          name: coverage-reports
+          name: coverage-report
           path: coverage
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: coverage/**/coverage.xml
+          files: |
+            coverage/users-service/coverage.xml
+            coverage/products-service/coverage.xml
+            coverage/orders-service/coverage.xml
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

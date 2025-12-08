@@ -75,5 +75,8 @@ jobs:
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-reports
-          path: "**/coverage.xml"
+           name: coverage-report
+           path: |
+            users-service/coverage.xml
+            products-service/coverage.xml
+            orders-service/coverage.xml
