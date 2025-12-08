@@ -1,4 +1,3 @@
 [bandit]
 exclude = tests
 skips = B104
-targets = users-service, products-service, orders-service, frontend
