@@ -1,16 +1,26 @@
 name: Scan and Build
+
 on:
   push:
     branches: [ main ]
+
 jobs:
-  build-and-scan:
+  build-scan:
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/checkout@v4
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build images
+
+      - name: Build image
         run: docker build -t capstone-users:ci ./users-service
-      - name: Run Trivy scan
-        run: |
-          docker run --rm aquasec/trivy:latest --version || true
+
+      - name: Run Trivy Scan
+        uses: aquasecurity/trivy-action@0.19.0
+        with:
+          image-ref: 'capstone-users:ci'
+          format: 'table'
+          severity: 'HIGH,CRITICAL'
+          exit-code: '0'
