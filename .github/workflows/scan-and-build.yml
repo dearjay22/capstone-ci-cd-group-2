@@ -9,8 +9,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      - name: Build images (example: users)
+      - name: Build images
         run: docker build -t capstone-users:ci ./users-service
-      - name: Run Trivy scan (if available)
+      - name: Run Trivy scan
         run: |
           docker run --rm aquasec/trivy:latest --version || true
