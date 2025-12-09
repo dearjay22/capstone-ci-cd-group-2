@@ -60,7 +60,7 @@ class DeploymentStack(Stack):
             self,
             "CapstoneDB",
             engine=rds.DatabaseInstanceEngine.mysql(
-                version=rds.MysqlEngineVersion.VER_8_0_34
+                version=rds.MysqlEngineVersion.VER_8_0_30
             ),
             instance_type=ec2.InstanceType.of(
                 ec2.InstanceClass.BURSTABLE3, ec2.InstanceSize.MICRO
