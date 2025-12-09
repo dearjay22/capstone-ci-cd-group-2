@@ -36,8 +36,6 @@ jobs:
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts")
 
-          echo "$artifacts" | jq '.artifacts | length'
-
           artifact_id=$(echo "$artifacts" | jq -r \
             --arg name "$ARTIFACT_NAME" '
               .artifacts
@@ -47,11 +45,11 @@ jobs:
             ')
 
           if [[ -z "$artifact_id" || "$artifact_id" == "null" ]]; then
-            echo "Artifact not found!"
+            echo "Artifact '$ARTIFACT_NAME' not found!"
             exit 1
           fi
 
-          echo "Artifact ID = $artifact_id"
+          echo "Found artifact ID: $artifact_id"
 
           curl -sL \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
@@ -69,10 +67,8 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: |
-            coverage/users-service/coverage.xml
-            coverage/products-service/coverage.xml
-            coverage/orders-service/coverage.xml
-          root_dir: .
-          disable_search: true
+          files: >
+            coverage-report/users-service/coverage.xml,
+            coverage-report/products-service/coverage.xml,
+            coverage-report/orders-service/coverage.xml
           fail_ci_if_error: true
