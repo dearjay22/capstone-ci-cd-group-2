@@ -3,8 +3,7 @@ name: Upload coverage to Codecov
 on:
   workflow_run:
     workflows: ["CI"]
-    types:
-      - completed
+    types: [completed]
 
 permissions:
   contents: read
@@ -13,60 +12,69 @@ permissions:
 jobs:
   upload:
     runs-on: ubuntu-latest
+
     if: >
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'main' &&
       github.event.workflow_run.conclusion == 'success'
 
     steps:
-    - name: Debug workflow_run payload
-      run: echo '${{ toJson(github.event.workflow_run) }}'
-    - name: Download coverage artifact from CI run (REST API)
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RUN_ID: ${{ github.event.workflow_run.run_id }}
-      run: |
-        set -euo pipefail
+      - name: Install tooling
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y jq unzip
 
-        # install small deps
-        sudo apt-get update -y
-        sudo apt-get install -y jq unzip
+      - name: Download latest coverage-report artifact (robust method)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_NAME: coverage-report
+        run: |
+          set -euo pipefail
 
-        run_id="${RUN_ID}"
-        repo_full="${GITHUB_REPOSITORY}"
-        owner="${repo_full%%/*}"
-        repo="${repo_full##*/}"
-        artifact_name="coverage-report"
+          echo "Fetching artifacts list..."
+          artifacts=$(curl -s \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts")
 
-        echo "Looking for artifact '${artifact_name}' in run ${run_id} of ${owner}/${repo}..."
-        artifacts_url="https://api.github.com/repos/${owner}/${repo}/actions/runs/${run_id}/artifacts"
+          echo "$artifacts" | jq '.artifacts | length as $l | "Found \($l) total artifacts."' 
 
-        artifact_id=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" "${artifacts_url}" \
-          | jq -r '.artifacts[] | select(.name==env.artifact_name) | .id' --arg artifact_name "${artifact_name}")
+          artifact_id=$(echo "$artifacts" | jq -r \
+            --arg name "$ARTIFACT_NAME" \
+            '
+            .artifacts
+            | sort_by(.created_at) | reverse
+            | map(select(.name == $name))
+            | .[0].id
+            ')
 
-        if [ -z "${artifact_id}" ] || [ "${artifact_id}" = "null" ]; then
-          echo "Artifact '${artifact_name}' not found for run ${run_id}"
-          echo "Available artifacts:"
-          curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" "${artifacts_url}" | jq -r '.artifacts[] | "\(.name) (id:\(.id))"'
-          exit 1
-        fi
+          if [[ -z "$artifact_id" || "$artifact_id" == "null" ]]; then
+            echo "ERROR: Artifact '$ARTIFACT_NAME' not found!"
+            echo "Available artifacts:"
+            echo "$artifacts" | jq -r '.artifacts[].name'
+            exit 1
+          fi
 
-        echo "Found artifact id: ${artifact_id}. Downloading..."
-        download_url="https://api.github.com/repos/${owner}/${repo}/actions/artifacts/${artifact_id}/zip"
-        curl -sL -H "Authorization: Bearer ${GITHUB_TOKEN}" "${download_url}" -o coverage-artifact.zip
+          echo "Found artifact ID: $artifact_id"
+          echo "Downloading ZIP..."
 
-        mkdir -p coverage
-        unzip -o coverage-artifact.zip -d coverage
-        echo "Artifact extracted to ./coverage"
+          curl -sL \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+            -o artifact.zip
 
-    - name: Checkout repo
-      uses: actions/checkout@v4
+          mkdir -p coverage
+          unzip -o artifact.zip -d coverage
 
-    - name: Upload to Codecov
-      uses: codecov/codecov-action@v4
-      with:
-        files: |
-          coverage/users-service/coverage.xml
-          coverage/products-service/coverage.xml
-          coverage/orders-service/coverage.xml
-        token: ${{ secrets.CODECOV_TOKEN }}
+          echo "Artifact successfully extracted to ./coverage"
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: |
+            coverage/users-service/coverage.xml
+            coverage/products-service/coverage.xml
+            coverage/orders-service/coverage.xml
