@@ -22,7 +22,7 @@ jobs:
     - name: Download coverage artifact from CI run (REST API)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RUN_ID: ${{ github.event.workflow_run.id }}
+        RUN_ID: ${{ github.event.workflow_run.check_suite_id }}
       run: |
         set -euo pipefail
 
