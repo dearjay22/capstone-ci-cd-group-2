@@ -1,12 +1,13 @@
 name: Upload coverage to Codecov
 
 on:
+  branches:
+      - main
   workflow_run:
     workflows: ["CI"]
     types:
       - completed
-    branches:
-      - main   # Only run when CI ran for pushes to main
+    
 
 permissions:
   contents: read
