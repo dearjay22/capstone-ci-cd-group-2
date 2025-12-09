@@ -5,6 +5,15 @@ __pycache__/
 
 # C extensions
 *.so
+# Ignore all node_modules everywhere
+**/node_modules/
+
+# Ignore build artifacts
+**/cdk.out/
+
+# Ignore everything inside infra except package-lock.json
+infra/*
+!infra/package-lock.json
 
 # Distribution / packaging
 .Python
