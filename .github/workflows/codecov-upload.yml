@@ -25,57 +25,22 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y jq unzip
 
-      - name: Download latest coverage-report artifact (robust method)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ARTIFACT_NAME: coverage-report
+      - name: Download and extract artifact
         run: |
           set -euo pipefail
-
-          echo "Fetching artifacts list..."
-          artifacts=$(curl -s \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts")
-
-          artifact_id=$(echo "$artifacts" | jq -r \
-            --arg name "$ARTIFACT_NAME" '
-              .artifacts
-              | sort_by(.created_at) | reverse
-              | map(select(.name == $name))
-              | .[0].id
-            ')
-
-          if [[ -z "$artifact_id" || "$artifact_id" == "null" ]]; then
-            echo "ERROR: Artifact '$ARTIFACT_NAME' not found!"
-            echo "Available artifacts:"
-            echo "$artifacts" | jq -r '.artifacts[].name'
-            exit 1
-          fi
-
-          echo "Found artifact ID: $artifact_id"
-          echo "Downloading ZIP..."
-
           curl -sL \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
             -o artifact.zip
 
-          mkdir -p coverage
-          unzip -o artifact.zip -d coverage
+          unzip -o artifact.zip
 
-          echo "Artifact successfully extracted to ./coverage"
-
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Debug Coverage Directory
-        run: |
-          echo "Contents of coverage directory:"
-          ls -R coverage || true
+      - name: Debug extracted files
+        run: ls -R .
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          directory: coverage
+          directory: .
           fail_ci_if_error: true
