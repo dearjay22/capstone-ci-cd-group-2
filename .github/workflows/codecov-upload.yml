@@ -13,7 +13,6 @@ jobs:
   upload:
     runs-on: ubuntu-latest
 
-    # Only run when CI succeeded AND it was triggered by a push to main
     if: >
       github.event.workflow_run.event == 'push' &&
       github.event.workflow_run.head_branch == 'main' &&
@@ -25,9 +24,35 @@ jobs:
           sudo apt-get update -y
           sudo apt-get install -y jq unzip
 
-      - name: Download and extract artifact
+      - name: Download and extract coverage artifact
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ARTIFACT_NAME: coverage-report
         run: |
           set -euo pipefail
+
+          echo "Fetching all artifacts..."
+          artifacts=$(curl -s \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts")
+
+          echo "$artifacts" | jq '.artifacts | length'
+
+          artifact_id=$(echo "$artifacts" | jq -r \
+            --arg name "$ARTIFACT_NAME" '
+              .artifacts
+              | sort_by(.created_at) | reverse
+              | map(select(.name == $name))
+              | .[0].id
+            ')
+
+          if [[ -z "$artifact_id" || "$artifact_id" == "null" ]]; then
+            echo "Artifact not found!"
+            exit 1
+          fi
+
+          echo "Artifact ID = $artifact_id"
+
           curl -sL \
             -H "Authorization: Bearer $GITHUB_TOKEN" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
@@ -36,7 +61,9 @@ jobs:
           unzip -o artifact.zip
 
       - name: Debug extracted files
-        run: ls -R .
+        run: |
+          echo "Directory tree after extraction:"
+          ls -R .
 
       - name: Upload to Codecov
         uses: codecov/codecov-action@v4
