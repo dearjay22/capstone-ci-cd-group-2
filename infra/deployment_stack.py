@@ -39,10 +39,11 @@ class DeploymentStack(Stack):
             self,
             "DbCredentials",
             generate_secret_string=secrets.SecretStringGenerator(
+                secret_string_template='{"username": "admin"}',
+                generate_string_key="password",
                 exclude_punctuation=True,
                 include_space=False,
                 password_length=16,
-                generate_string_key="username",
             ),
         )
 
