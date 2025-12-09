@@ -69,5 +69,10 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          files: "**/coverage.xml"
+          files: |
+            coverage/users-service/coverage.xml
+            coverage/products-service/coverage.xml
+            coverage/orders-service/coverage.xml
+          root_dir: .
+          disable_search: true
           fail_ci_if_error: true
