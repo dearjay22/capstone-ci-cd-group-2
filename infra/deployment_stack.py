@@ -6,9 +6,9 @@ from aws_cdk import (
     aws_secretsmanager as secrets,
     CfnOutput,
     Duration,
+    RemovalPolicy,
 )
 from constructs import Construct
-
 
 class DeploymentStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs):
@@ -34,7 +34,7 @@ class DeploymentStack(Stack):
             ],
         )
 
-        # Bandit-safe Secret Manager configuration
+        # Secret Manager
         db_secret = secrets.Secret(
             self,
             "DbCredentials",
@@ -56,6 +56,7 @@ class DeploymentStack(Stack):
             allow_all_outbound=False,
         )
 
+        # RDS Instance
         database = rds.DatabaseInstance(
             self,
             "CapstoneDB",
@@ -76,9 +77,11 @@ class DeploymentStack(Stack):
             security_groups=[rds_sg],
             backup_retention=Duration.days(0),
             deletion_protection=False,
-            removal_policy=Stack.of(self).node.try_get_context("retain_resources")
-            and Stack.of(self).RETAIN
-            or Stack.of(self).DESTROY,
+            removal_policy=(
+                RemovalPolicy.RETAIN
+                if Stack.of(self).node.try_get_context("retain_resources")
+                else RemovalPolicy.DESTROY
+            ),
         )
 
         CfnOutput(
