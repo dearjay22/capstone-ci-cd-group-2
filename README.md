@@ -293,7 +293,7 @@ Add these secrets to your GitHub repository:
 ## 📈 Code Coverage
 
 View detailed coverage reports:
-- Codecov: https://codecov.io/gh/group2/capstone-ci-cd-group-2
+- [Codecov: https://app.codecov.io/gh/dearjay22/capstone-ci-cd-group-2]
 - Local: Open `htmlcov/index.html` after running pytest
 
 ## 🔐 Security
