@@ -19,10 +19,12 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
 
     steps:
+    - name: Debug workflow_run payload
+      run: echo '${{ toJson(github.event.workflow_run) }}'
     - name: Download coverage artifact from CI run (REST API)
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        RUN_ID: ${{ github.event.workflow_run.check_suite_id }}
+        RUN_ID: ${{ github.event.workflow_run.run_id }}
       run: |
         set -euo pipefail
 
