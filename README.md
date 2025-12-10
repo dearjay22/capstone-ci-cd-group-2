@@ -353,7 +353,7 @@ docker-compose logs orders
 
 ```bash
 # Find process using port
-lsof -i :3000
+lsof -i :3000 
 lsof -i :5001
 
 # Kill process
